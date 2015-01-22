@@ -12,6 +12,8 @@ class Cell:
         self.net_num = 0
         self.label = 0
         self.prev = None
+        self.rect_id = None
+        self.text_id = None
 
     def __str__(self):
         return "Cell(x=%s, y=%s, content=%s, net_num=%s, label=%s, prev=%s)" % (
@@ -79,7 +81,6 @@ def get_neighbours(cell):
 
 
 def route_net(net):
-    pdb.set_trace()
     source = net.source
     target = net.sinks[0] # TODO route to multiple sinks
     expansion_list = [] # TODO better implementation of priority queue
@@ -99,8 +100,9 @@ def route_net(net):
         expansion_list.remove(g)
 
         print('expanding on {}'.format(g))
-        layout.print_grid()
-        print()
+        # layout.print_grid()
+        # print()
+
         # if g is the target, exit the loop
         if g is target:
             break
@@ -130,7 +132,6 @@ def route_net(net):
         g.content = 'net'
         net.route.append(g)
         g = g.prev
-    pdb.set_trace()
 
 
 def parse_netlist(filepath):
@@ -189,7 +190,32 @@ def open_benchmark(*args):
     filename.set(os.path.basename(openfilename))
     parse_netlist(openfilename)
     layout.print_grid()
-    # adjust cell sizes by size of grid/ how many cells there are
+
+    # initialize canvas with rectangles for layout
+    # TODO move into GUI related function
+    rw = canvas.winfo_width() // layout.xsize
+    rh = canvas.winfo_height() // layout.ysize
+    for row in layout.grid:
+        for cell in row:
+            x1 = cell.x * rw
+            x2 = x1 + rw
+            y1 = cell.y * rh
+            y2 = y1 + rh
+            cell.rect_id = canvas.create_rectangle(x1, y1, x2, y2, fill='white')
+
+            # colour rectangles depending on content
+            if cell.content == 'obstacle':
+                canvas.itemconfigure(cell.rect_id, fill='blue')
+            elif cell.net_num != 0:
+                colour = net_colours[(cell.net_num - 1) % len(net_colours)]
+                canvas.itemconfigure(cell.rect_id, fill=colour)
+
+                # label source and sink with net number
+                x1, y2, x2, y2 = canvas.coords(cell.rect_id) # get rect coords
+                center_x = (x1 + x2) / 2
+                center_y = (y1 + y2) / 2
+                canvas.create_text(center_x, center_y, text=str(cell.net_num))
+
 
 
 def proceed(*args):
@@ -200,36 +226,40 @@ def restart(*args):
     pass
 
 
-# main -- TODO put into class later
-layout = Layout()
+# main function TODO put into class
+if __name__ == '__main__':
+    layout = Layout()
 
-root = Tk()
-root.title("Assignment1-Routing")
+    root = Tk()
+    root.title("Assignment1-Routing")
 
-# frames
-top_frame = ttk.Frame(root, padding="3 3 12 12")
-top_frame.grid(column=0, row=0, sticky=(N,E,S,W))
-top_frame.columnconfigure(0, weight=1)
-top_frame.rowconfigure(0, weight=1)
-canvas_frame = ttk.Frame(top_frame)
-canvas_frame.grid(column=0, row=0, sticky=(N,E,S,W))
-btn_frame = ttk.Frame(top_frame)
-btn_frame.grid(column=0, row=1, sticky=(N,E,S,W))
+    # frames
+    top_frame = ttk.Frame(root, padding="3 3 12 12")
+    top_frame.grid(column=0, row=0, sticky=(N,E,S,W))
+    top_frame.columnconfigure(0, weight=1)
+    top_frame.rowconfigure(0, weight=1)
+    canvas_frame = ttk.Frame(top_frame)
+    canvas_frame.grid(column=0, row=0, sticky=(N,E,S,W))
+    btn_frame = ttk.Frame(top_frame)
+    btn_frame.grid(column=0, row=1, sticky=(N,E,S,W))
 
-# canvas frame (benchmark label + canvas)
-filename = StringVar()
-benchmark_lbl = ttk.Label(canvas_frame, textvariable=filename)
-benchmark_lbl.grid(column=0, row=0)
-canvas = Canvas(canvas_frame, width=640, height=480, bg="blue")
-canvas.grid(column=0, row=1, padx=5, pady=5)
+    # canvas frame (benchmark label + canvas)
+    filename = StringVar()
+    benchmark_lbl = ttk.Label(canvas_frame, textvariable=filename)
+    benchmark_lbl.grid(column=0, row=0)
+    canvas = Canvas(canvas_frame, width=640, height=480, bg="dark grey")
+    canvas.grid(column=0, row=1, padx=5, pady=5)
 
-# button frame (buttons)
-open_btn = ttk.Button(btn_frame, text="Open", command=open_benchmark)
-open_btn.grid(column=0, row=0, padx=5, pady=5)
-proceed_btn = ttk.Button(btn_frame, text="Proceed", command=proceed)
-proceed_btn.grid(column=1, row=0, padx=5, pady=5)
-restart_btn = ttk.Button(btn_frame, text="Restart", command=restart)
-restart_btn.grid(column=2, row=0, padx=5, pady=5)
+    net_colours = ['red', 'yellow', 'light grey', 'orange', 'magenta',
+            'violet', 'green', 'purple']
 
-# run mainloop
-root.mainloop()
+    # button frame (buttons)
+    open_btn = ttk.Button(btn_frame, text="Open", command=open_benchmark)
+    open_btn.grid(column=0, row=0, padx=5, pady=5)
+    proceed_btn = ttk.Button(btn_frame, text="Proceed", command=proceed)
+    proceed_btn.grid(column=1, row=0, padx=5, pady=5)
+    restart_btn = ttk.Button(btn_frame, text="Restart", command=restart)
+    restart_btn.grid(column=2, row=0, padx=5, pady=5)
+
+    # run mainloop
+    root.mainloop()
