@@ -268,8 +268,8 @@ def open_benchmark(*args):
 
 
 
-def proceed(*args):
-    """Function called when pressing Proceed button.
+def route(*args):
+    """Function called when pressing Route button.
 
     Routes the first net in the netlist."""
     route_net(layout.netlist[0]) # TODO route all nets
@@ -312,8 +312,8 @@ if __name__ == '__main__':
     # button frame (buttons)
     open_btn = ttk.Button(btn_frame, text="Open", command=open_benchmark)
     open_btn.grid(column=0, row=0, padx=5, pady=5)
-    proceed_btn = ttk.Button(btn_frame, text="Proceed", command=proceed)
-    proceed_btn.grid(column=1, row=0, padx=5, pady=5)
+    route_btn = ttk.Button(btn_frame, text="Route", command=route)
+    route_btn.grid(column=1, row=0, padx=5, pady=5)
     restart_btn = ttk.Button(btn_frame, text="Restart", command=restart)
     restart_btn.grid(column=2, row=0, padx=5, pady=5)
 
