@@ -5,6 +5,8 @@ from tkinter import ttk
 from tkinter import filedialog
 
 class Cell:
+    """Class representing a cell in the layout."""
+
     def __init__(self, xloc, yloc):
         self.x = xloc
         self.y = yloc
@@ -21,6 +23,8 @@ class Cell:
 
 
 class Net:
+    """Class representing a net."""
+
     def __init__(self, num_pins, source, sinks):
         self.num_pins = num_pins
         self.source = source
@@ -33,6 +37,8 @@ class Net:
 
 
 class Layout:
+    """Class representing a the grid layout"""
+
     def __init__(self):
         self.xsize = 0
         self.ysize = 0
@@ -61,6 +67,9 @@ class Layout:
 
 
 def get_neighbours(cell):
+    """Return a list of neighbours of a given cell.
+    
+    Does not include neighbours that are obstacles"""
     neighbours = []
 
     # coordinates of possible neighbours
@@ -81,6 +90,7 @@ def get_neighbours(cell):
 
 
 def route_net(net):
+    """Route a net from source to first sink."""
     source = net.source
     target = net.sinks[0] # TODO route to multiple sinks
     expansion_list = [] # TODO better implementation of priority queue
@@ -135,6 +145,9 @@ def route_net(net):
 
 
 def parse_netlist(filepath):
+    """Parse a netlist and populate the layout.grid.
+    
+    filepath - the full path of the netlist file to parse"""
     with open(filepath, 'r') as f:
         # first line is grid size
         line = f.readline().strip().split()
@@ -184,6 +197,10 @@ def parse_netlist(filepath):
 
 
 def open_benchmark(*args):
+    """Function called when pressing Open button.
+    
+    Opens a dialog for user to select a netlist file, parses netlist
+    file and sets up initial grid in the GUI."""
     openfilename = filedialog.askopenfilename()
     if openfilename == '':
         return
@@ -219,10 +236,16 @@ def open_benchmark(*args):
 
 
 def proceed(*args):
+    """Function called when pressing Proceed button.
+
+    Routes the first net in the netlist."""
     route_net(layout.netlist[0]) # TODO route all nets
 
 
 def restart(*args):
+    """Function called when pressing Restart button.
+
+    Currently does nothing."""
     pass
 
 
