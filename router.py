@@ -39,6 +39,25 @@ class Cell:
         else:
             return False
 
+    def set_label(self, label):
+        self.label = label
+        self.set_text(str(label))
+
+    def set_text(self, text):
+        # create canvas text if needed
+        if self.text_id == None:
+            x, y = self._get_center()
+            self.text_id = canvas.create_text(x, y, text=text)
+        else:
+            canvas.itemconfigure(self.text_id, text=text)
+
+    def _get_center(self):
+        """Returns (x, y) coordinates of center of Cell's canvas rectangle."""
+        x1, y1, x2, y2 = canvas.coords(self.rect_id) # get rect coords
+        center_x = (x1 + x2) / 2
+        center_y = (y1 + y2) / 2
+        return (center_x, center_y)
+
 
 class Net:
     """Class representing a net."""
@@ -124,7 +143,7 @@ def route_net(net):
     expansion_list = [] # TODO better implementation of priority queue
 
     # label source with 1, add to expansion list
-    source.label = 1
+    source.set_label(1)
     expansion_list.append(source)
 
     # while expansion list is not empty:
@@ -151,7 +170,7 @@ def route_net(net):
             # if neighbour is unlabelled:
             if neighbour.label == 0:
                 # label neighbour with g + 1
-                neighbour.label = g.label + 1
+                neighbour.set_label(g.label + 1)
                 # set previous cell of neighbour to current cell
                 neighbour.prev = g
                 # add neighbour to expansion list
@@ -261,11 +280,7 @@ def open_benchmark(*args):
                 canvas.itemconfigure(cell.rect_id, fill=colour)
 
                 # label source and sink with net number
-                x1, y2, x2, y2 = canvas.coords(cell.rect_id) # get rect coords
-                center_x = (x1 + x2) / 2
-                center_y = (y1 + y2) / 2
-                canvas.create_text(center_x, center_y, text=str(cell.net_num))
-
+                cell.set_text(str(cell.net_num))
 
 
 def route(*args):
