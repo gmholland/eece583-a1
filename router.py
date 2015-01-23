@@ -206,18 +206,23 @@ def open_benchmark(*args):
         return
     filename.set(os.path.basename(openfilename))
     parse_netlist(openfilename)
-    layout.print_grid()
+    # layout.print_grid()
 
     # initialize canvas with rectangles for layout
-    # TODO move into GUI related function
-    rw = canvas.winfo_width() // layout.xsize
-    rh = canvas.winfo_height() // layout.ysize
+    # TODO move into GUI related function?
+    cw = canvas.winfo_width()
+    ch = canvas.winfo_height()
+    rw = cw // layout.xsize
+    rh = ch // layout.ysize
+    xoffset = (cw % rw) / 2
+    yoffset = (ch % rh) / 2
+    print(cw, ch, rw, rh, xoffset, yoffset)
     for row in layout.grid:
         for cell in row:
-            x1 = cell.x * rw
-            x2 = x1 + rw
-            y1 = cell.y * rh
-            y2 = y1 + rh
+            x1 = cell.x * rw + xoffset
+            x2 = x1 + rw + xoffset
+            y1 = cell.y * rh + yoffset
+            y2 = y1 + rh + yoffset
             cell.rect_id = canvas.create_rectangle(x1, y1, x2, y2, fill='white')
 
             # colour rectangles depending on content
