@@ -21,19 +21,38 @@ class Cell:
         return "Cell(x=%s, y=%s, content=%s, net_num=%s, label=%s, prev=%s)" % (
                 self.x, self.y, self.content, self.net_num, self.label, repr(self.prev))
 
+    def is_obstacle(self):
+        if self.content == 'obstacle':
+            return True
+        else:
+            return False
+
+    def is_sink(self):
+        if self.content == 'net_sink':
+            return True
+        else:
+            return False
+
+    def is_source(self):
+        if self.content == 'net_src':
+            return True
+        else:
+            return False
+
 
 class Net:
     """Class representing a net."""
 
-    def __init__(self, num_pins, source, sinks):
+    def __init__(self, num_pins, source, sinks, net_num):
         self.num_pins = num_pins
         self.source = source
         self.sinks = sinks
         self.route = []
+        self.net_num = net_num
 
     def __str__(self):
-        return "Net(num_pins=%s, source=%s, sinks=%s)" % (
-                self.num_pins, self.source, self.sinks)
+        return "Net(num_pins=%s, source=%s, sinks=%s, net_num=%s)" % (
+                self.num_pins, self.source, self.sinks, self.net_num)
 
 
 class Layout:
@@ -52,24 +71,29 @@ class Layout:
 
     def print_grid(self):
         for row in self.grid:
-            for c in row:
-                if c.content == 'net_src':
-                    print('[{}s]'.format(c.net_num), end='')
-                elif c.content == 'net_sink':
-                    print('[{}t]'.format(c.net_num), end='')
-                elif c.label != 0:
-                    print('[{: >2}]'.format(c.label), end='')
-                elif c.content == 'obstacle':
+            for cell in row:
+                if cell.is_source():
+                    print('[{}s]'.format(cell.net_num), end='')
+                elif cell.is_sink():
+                    print('[{}t]'.format(cell.net_num), end='')
+                elif cell.label != 0:
+                    print('[{: >2}]'.format(cell.label), end='')
+                elif cell.is_obstacle():
                     print('[**]', end='')
                 else:
                     print('[  ]', end='')
             print()
 
 
-def get_neighbours(cell):
+def get_neighbours(cell, net_num):
     """Return a list of neighbours of a given cell.
     
-    Does not include neighbours that are obstacles"""
+    cell - the Cell instance for which to find neighbours
+    net_num - the net number of the Net instance we are routing
+
+    Does not include neighbour Cells that contain obstacles or cells that
+    belong to other nets."""
+    # list to return
     neighbours = []
 
     # coordinates of possible neighbours
@@ -81,10 +105,14 @@ def get_neighbours(cell):
     for loc in locs:
         # check bounds of possible neighbours
         if (0 <= loc['x'] < layout.xsize) and (0 <= loc['y'] < layout.ysize):
-            c = layout.grid[loc['y']][loc['x']]
-            # don't consider obstacles or other net's cells
-            if c.content != 'obstacle':
-                neighbours.append(c)
+            cell = layout.grid[loc['y']][loc['x']]
+            # don't consider obstacles
+            if cell.is_obstacle():
+                continue
+            # don't consider cells that belong to other nets
+            if cell.net_num not in [0, net_num]:
+                continue
+            neighbours.append(cell)
 
     return neighbours
 
@@ -118,7 +146,7 @@ def route_net(net):
             break
 
         # for all neighbours of g:
-        neighbours = get_neighbours(g)
+        neighbours = get_neighbours(g, net.net_num)
         for neighbour in neighbours:
             # if neighbour is unlabelled:
             if neighbour.label == 0:
@@ -193,7 +221,7 @@ def parse_netlist(filepath):
                 sink.net_num = net_num
                 sinks.append(sink)
 
-            layout.netlist.append(Net(num_pins, source, sinks))
+            layout.netlist.append(Net(num_pins, source, sinks, net_num))
 
 
 def open_benchmark(*args):
@@ -226,7 +254,7 @@ def open_benchmark(*args):
             cell.rect_id = canvas.create_rectangle(x1, y1, x2, y2, fill='white')
 
             # colour rectangles depending on content
-            if cell.content == 'obstacle':
+            if cell.is_obstacle():
                 canvas.itemconfigure(cell.rect_id, fill='blue')
             elif cell.net_num != 0:
                 colour = net_colours[(cell.net_num - 1) % len(net_colours)]
