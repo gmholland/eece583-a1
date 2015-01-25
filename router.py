@@ -21,6 +21,12 @@ class Cell:
         return "Cell(x=%s, y=%s, content=%s, net_num=%s, label=%s, prev=%s)" % (
                 self.x, self.y, self.content, self.net_num, self.label, repr(self.prev))
 
+    def is_empty(self):
+        if self.content == 'empty':
+            return True
+        else:
+            return False
+
     def is_obstacle(self):
         if self.content == 'obstacle':
             return True
@@ -41,7 +47,10 @@ class Cell:
 
     def set_label(self, label):
         self.label = label
-        self.set_text(str(label))
+        if label == 0:
+            self.set_text('')
+        else:
+            self.set_text(str(label))
 
     def set_text(self, text):
         # create canvas text if needed
@@ -57,6 +66,16 @@ class Cell:
         center_x = (x1 + x2) / 2
         center_y = (y1 + y2) / 2
         return (center_x, center_y)
+
+    def colourize(self):
+        """Colour the cell according to contents."""
+        net_colours = ['red', 'yellow', 'light grey', 'orange', 'magenta',
+                'violet', 'green', 'purple']
+        if self.is_obstacle():
+            canvas.itemconfigure(self.rect_id, fill='blue')
+        elif self.net_num != 0:
+            colour = net_colours[(self.net_num - 1) % len(net_colours)]
+            canvas.itemconfigure(self.rect_id, fill=colour)
 
 
 class Net:
@@ -190,6 +209,13 @@ def route_net(net):
         net.route.append(g)
         g = g.prev
 
+    # clear labels of empty cells, update colours
+    for row in layout.grid:
+        for cell in row:
+            if cell.is_empty():
+                cell.set_label(0)
+            cell.colourize()
+
 
 def parse_netlist(filepath):
     """Parse a netlist and populate the layout.grid.
@@ -272,13 +298,9 @@ def open_benchmark(*args):
             y2 = y1 + rh + yoffset
             cell.rect_id = canvas.create_rectangle(x1, y1, x2, y2, fill='white')
 
-            # colour rectangles depending on content
-            if cell.is_obstacle():
-                canvas.itemconfigure(cell.rect_id, fill='blue')
-            elif cell.net_num != 0:
-                colour = net_colours[(cell.net_num - 1) % len(net_colours)]
-                canvas.itemconfigure(cell.rect_id, fill=colour)
-
+            # colour cell and set text label
+            cell.colourize()
+            if cell.net_num != 0:
                 # label source and sink with net number
                 cell.set_text(str(cell.net_num))
 
@@ -320,9 +342,6 @@ if __name__ == '__main__':
     benchmark_lbl.grid(column=0, row=0)
     canvas = Canvas(canvas_frame, width=640, height=480, bg="dark grey")
     canvas.grid(column=0, row=1, padx=5, pady=5)
-
-    net_colours = ['red', 'yellow', 'light grey', 'orange', 'magenta',
-            'violet', 'green', 'purple']
 
     # button frame (buttons)
     open_btn = ttk.Button(btn_frame, text="Open", command=open_benchmark)
