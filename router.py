@@ -309,7 +309,8 @@ def route(*args):
     """Function called when pressing Route button.
 
     Routes the first net in the netlist."""
-    route_net(layout.netlist[0]) # TODO route all nets
+    for net in layout.netlist:
+        route_net(net)
 
 
 def restart(*args):
