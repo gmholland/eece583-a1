@@ -1,5 +1,6 @@
 import os.path
 import pdb
+import random
 from priorityq import *
 from tkinter import *
 from tkinter import ttk
@@ -20,7 +21,7 @@ class Cell:
         self.text_id = None
 
     def __str__(self):
-        return "Cell(x=%s, y=%s, content=%s, net_num=%s, label=%s, prev=%s)" % (
+        return "Cell((%s, %s) %s, n=%s, l=%s, prev=%s)" % (
                 self.x, self.y, self.content, self.net_num, self.label, repr(self.prev))
 
     def is_empty(self):
@@ -36,13 +37,13 @@ class Cell:
             return False
 
     def is_sink(self):
-        if self.content == 'net_sink':
+        if self.content == 'sink':
             return True
         else:
             return False
 
     def is_source(self):
-        if self.content == 'net_src':
+        if self.content == 'src':
             return True
         else:
             return False
@@ -54,7 +55,17 @@ class Cell:
         else:
             self.set_text(str(label))
 
-    def set_text(self, text):
+    def clear_label(self):
+        if (not self.is_source()) and (not self.is_sink()):
+            self.set_label(0)
+
+    def set_text(self, text=''):
+        # text for source is +, text for sink is -
+        if self.is_source():
+            text = '+'
+        elif self.is_sink():
+            text = '-'
+
         # create canvas text if needed
         if self.text_id == None:
             x, y = self._get_center()
@@ -91,7 +102,6 @@ class Net:
         self.num_pins = num_pins
         self.source = source
         self.sinks = sinks
-        self.route = []
         self.net_num = net_num
         self.routed = False
 
@@ -151,7 +161,9 @@ def get_neighbours(cell, net_num):
             {'x' : cell.x+1, 'y' : cell.y},   # east
             {'x' : cell.x,   'y' : cell.y+1}, # south
             {'x' : cell.x-1, 'y' : cell.y}]   # west
-
+    
+    # get neighbours in random order
+    random.shuffle(locs) 
     for loc in locs:
         # check bounds of possible neighbours
         if (0 <= loc['x'] < layout.xsize) and (0 <= loc['y'] < layout.ysize):
@@ -167,16 +179,31 @@ def get_neighbours(cell, net_num):
     return neighbours
 
 
-def route_net(net):
-    """Route a net from source to first sink.
+def route_net(source, target=None):
+    """Route a single net from source to optional target.
     
+    If a target is given, uses A* algorithm to find a route between source
+    and target. If no target is given, source is assumed to be a net sink
+    and Lee-Moore algorithm is run to expand out from the sink looking for
+    previously routed cells.
+
     Returns True if net is successfully routed, False otherwise."""
-    source = net.source
-    target = net.sinks[0] # TODO route to multiple sinks
+    if target == None:
+        algorithm = 'Lee-Moore'
+        print("routing sink {}".format(source))
+    else:
+        algorithm = 'A*'
+        print("routing source: {} to target: {}".format(source, target))
+
     expansion_list = PriorityQueue()
 
-    # label source with estimated distance to target, add to expansion list
-    source.set_label(source.estimate_dist(target))
+    # set source label according to algorithm
+    if algorithm == 'A*':
+        # A*: source label is estimated distance to target
+        label = source.estimate_dist(target)
+    else:
+        label = 1
+    source.set_label(label)
     expansion_list.add(item=source, priority=source.label)
 
     # while expansion list is not empty:
@@ -184,20 +211,26 @@ def route_net(net):
         # g = grid in expansion list with smallest label
         g = expansion_list.extract_min()
 
-        print('expanding on {}'.format(g))
+        # print('expanding on {}'.format(g))
 
         # if g is the target, exit the loop
-        if g is target:
+        # if g is target:
+        #     break
+        if (g.net_num == source.net_num) and (g is not source):
             break
 
         # for all neighbours of g:
-        neighbours = get_neighbours(g, net.net_num)
+        neighbours = get_neighbours(g, source.net_num)
         for neighbour in neighbours:
             # if neighbour is unlabelled:
             if neighbour.label == 0:
-                # label neighbour with dist from source + estimate of dist to go
                 neighbour.dist_from_src = g.dist_from_src + 1
-                label = neighbour.dist_from_src + neighbour.estimate_dist(target)
+                if algorithm == 'A*':
+                    # label neighbour with dist from source + estimate of dist to go
+                    label = neighbour.dist_from_src + neighbour.estimate_dist(target)
+                else: # Lee-More
+                    # label neighbour with distance from source
+                    label = neighbour.dist_from_src
                 neighbour.set_label(label)
                 # set previous cell of neighbour to current cell
                 neighbour.prev = g
@@ -207,22 +240,28 @@ def route_net(net):
     # if loop terminates without hitting target, fail
     else:
         print("couldn't route net!")
+        # clear labels of empty cells, update colours
+        for row in layout.grid:
+            for cell in row:
+                cell.clear_label()
+                cell.colourize()
         return False
 
     # traceback():
     # - start at taget, walk back along prev cells
     print("routed net!")
     while g is not source:
-        g.net_num = target.net_num
-        g.content = 'net'
-        net.route.append(g)
+        # don't modify content for source and sink
+        if not (g.is_source()) and (not g.is_sink()):
+            g.net_num = source.net_num
+            g.content = 'net'
+        #net.route.append(g)
         g = g.prev
 
     # clear labels of empty cells, update colours
     for row in layout.grid:
         for cell in row:
-            if cell.is_empty():
-                cell.set_label(0)
+            cell.clear_label()
             cell.colourize()
 
     return True
@@ -264,7 +303,7 @@ def parse_netlist(filepath):
             xloc = line.pop(0)
             yloc = line.pop(0)
             source = layout.grid[yloc][xloc]
-            source.content = 'net_src'
+            source.content = 'src'
             source.net_num = net_num
 
             # next items are x, y coordinates of sinks
@@ -273,7 +312,7 @@ def parse_netlist(filepath):
                 xloc = line.pop(0)
                 yloc = line.pop(0)
                 sink = layout.grid[yloc][xloc]
-                sink.content = 'net_sink'
+                sink.content = 'sink'
                 sink.net_num = net_num
                 sinks.append(sink)
 
@@ -319,8 +358,8 @@ def open_benchmark(*args):
             # colour cell and set text label
             cell.colourize()
             if cell.net_num != 0:
-                # label source and sink with net number
-                cell.set_text(str(cell.net_num))
+                # label source and sink
+                cell.set_text()
 
 
 def route(*args):
@@ -333,7 +372,15 @@ def route(*args):
     # route nets in netlist
     nets_routed = 0
     for net in layout.netlist:
-        net.routed = route_net(net)
+        # route from source to first sink
+        route_net(net.source, net.sinks[0]) # TODO intelligent ordering
+
+        # expand around sink looking for connection to trunk
+        if len(net.sinks) > 1:
+            print("multiple sinks...")
+            for sink in net.sinks[1:]:
+                route_net(sink)
+
         if net.is_routed():
             nets_routed = nets_routed + 1
 
