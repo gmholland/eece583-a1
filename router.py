@@ -93,10 +93,14 @@ class Net:
         self.sinks = sinks
         self.route = []
         self.net_num = net_num
+        self.routed = False
 
     def __str__(self):
         return "Net(num_pins=%s, source=%s, sinks=%s, net_num=%s)" % (
                 self.num_pins, self.source, self.sinks, self.net_num)
+
+    def is_routed(self):
+        return self.routed
 
 
 class Layout:
@@ -164,7 +168,9 @@ def get_neighbours(cell, net_num):
 
 
 def route_net(net):
-    """Route a net from source to first sink."""
+    """Route a net from source to first sink.
+    
+    Returns True if net is successfully routed, False otherwise."""
     source = net.source
     target = net.sinks[0] # TODO route to multiple sinks
     expansion_list = PriorityQueue()
@@ -201,7 +207,7 @@ def route_net(net):
     # if loop terminates without hitting target, fail
     else:
         print("couldn't route net!")
-        return
+        return False
 
     # traceback():
     # - start at taget, walk back along prev cells
@@ -218,6 +224,8 @@ def route_net(net):
             if cell.is_empty():
                 cell.set_label(0)
             cell.colourize()
+
+    return True
 
 
 def parse_netlist(filepath):
@@ -277,12 +285,17 @@ def open_benchmark(*args):
     
     Opens a dialog for user to select a netlist file, parses netlist
     file and sets up initial grid in the GUI."""
+
+    # open a select file dialog for user to choose a benchmark file
     openfilename = filedialog.askopenfilename()
     # return if user cancels out of dialog
     if not openfilename:
         return
     filename.set(os.path.basename(openfilename))
     parse_netlist(openfilename)
+
+    # reset the statsistics label
+    stats_text.set("")
 
     # enable the Route button
     route_btn.state(['!disabled'])
@@ -314,12 +327,18 @@ def route(*args):
     """Function called when pressing Route button.
 
     Routes each net in the netlist."""
-    # route nets in netlist
-    for net in layout.netlist:
-        route_net(net)
-
-    # disable the Route button
+    # disable the Route button after starting routing
     route_btn.state(['disabled'])
+
+    # route nets in netlist
+    nets_routed = 0
+    for net in layout.netlist:
+        net.routed = route_net(net)
+        if net.is_routed():
+            nets_routed = nets_routed + 1
+
+    # display stats # TODO put into gui related function
+    stats_text.set("Routed {}/{} nets".format(nets_routed, len(layout.netlist)))
 
 
 def restart(*args):
@@ -345,6 +364,8 @@ if __name__ == '__main__':
     canvas_frame.grid(column=0, row=0, sticky=(N,E,S,W))
     btn_frame = ttk.Frame(top_frame)
     btn_frame.grid(column=0, row=1, sticky=(N,E,S,W))
+    stats_frame = ttk.Frame(top_frame)
+    stats_frame.grid(column=0, row=2)
 
     # canvas frame (benchmark label + canvas)
     filename = StringVar()
@@ -362,6 +383,12 @@ if __name__ == '__main__':
     restart_btn = ttk.Button(btn_frame, text="Restart", command=restart)
     restart_btn.grid(column=2, row=0, padx=5, pady=5)
     restart_btn.state(['disabled'])
+
+    # stats frame
+    stats_text = StringVar()
+    stats_text.set("")
+    stats_lbl = ttk.Label(stats_frame, textvariable=stats_text)
+    stats_lbl.grid(column=0, row=0)
 
     # run mainloop
     root.mainloop()
