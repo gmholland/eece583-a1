@@ -56,6 +56,7 @@ class Cell:
             self.set_text(str(label))
 
     def clear_label(self):
+        # don't clear labels from source or sinks
         if (not self.is_source()) and (not self.is_sink()):
             self.set_label(0)
 
@@ -106,7 +107,7 @@ class Net:
         self.routed = False
 
     def __str__(self):
-        return "Net(num_pins=%s, source=%s, sinks=%s, net_num=%s)" % (
+        return "Net(pins=%s, src=%s, sinks=%s, net=%s)" % (
                 self.num_pins, self.source, self.sinks, self.net_num)
 
     def is_routed(self):
@@ -114,7 +115,7 @@ class Net:
 
 
 class Layout:
-    """Class representing a the grid layout"""
+    """Class representing a the grid layout."""
 
     def __init__(self):
         self.xsize = 0
@@ -123,13 +124,13 @@ class Layout:
         self.netlist = []
 
     def init_grid(self, xsize, ysize):
-        """Initialize the grid to given size by populating with empty Cells"""
+        """Initialize the grid to given size by populating with empty Cells."""
         self.grid = [[Cell(x, y) for x in range(xsize)] for y in range(ysize)]
         self.xsize = xsize
         self.ysize = ysize
 
     def print_grid(self):
-        """Print the grid in text format"""
+        """Print the grid in text format."""
         for row in self.grid:
             for cell in row:
                 if cell.is_source():
@@ -148,6 +149,7 @@ class Layout:
 def get_neighbours(cell, net_num):
     """Return a list of neighbours of a given cell.
     
+    Arguments:
     cell - the Cell instance for which to find neighbours
     net_num - the net number of the Net instance we are routing
 
@@ -371,9 +373,9 @@ def route(*args):
 
     # route nets in netlist
     nets_routed = 0
-    for net in layout.netlist:
+    for net in layout.netlist: # TODO intelligent net ordering
         # route from source to first sink
-        route_net(net.source, net.sinks[0]) # TODO intelligent ordering
+        route_net(net.source, net.sinks[0]) # TODO intelligent sink ordering
 
         # expand around sink looking for connection to trunk
         if len(net.sinks) > 1:
@@ -384,7 +386,7 @@ def route(*args):
         if net.is_routed():
             nets_routed = nets_routed + 1
 
-    # display stats # TODO put into gui related function
+    # display stats
     stats_text.set("Routed {}/{} nets".format(nets_routed, len(layout.netlist)))
 
 
