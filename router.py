@@ -19,6 +19,7 @@ class Cell:
         self.prev = None
         self.rect_id = None
         self.text_id = None
+        self.connected = False
 
     def __str__(self):
         return "Cell({net} {content} ({x}, {y}) l={label}, prev={prev})".format(
@@ -48,6 +49,9 @@ class Cell:
             return True
         else:
             return False
+
+    def is_connected(self):
+        return self.connected
 
     def set_label(self, label):
         self.label = label
@@ -227,7 +231,8 @@ def route_net(source, target=None):
                 break
         # for Lee-More: if we reach a matching net, exit the loop
         else:
-            if (g.net_num == source.net_num) and (g is not source):
+            if (g.is_connected()) and (g.net_num == source.net_num) and (
+                    g is not source):
                 break
 
         # for all neighbours of g:
@@ -258,6 +263,7 @@ def route_net(source, target=None):
     # - start at taget, walk back along prev cells
     print("routed net!")
     while g is not source:
+        g.connected = True
         # don't modify content for source and sink
         if not (g.is_source()) and (not g.is_sink()):
             g.net_num = source.net_num
@@ -310,6 +316,7 @@ def parse_netlist(filepath):
             yloc = line.pop(0)
             source = layout.grid[yloc][xloc]
             source.content = 'src'
+            source.connected = True
             source.net_num = net_num
 
             # next items are x, y coordinates of sinks
