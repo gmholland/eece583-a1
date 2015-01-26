@@ -108,11 +108,13 @@ class Layout:
         self.netlist = []
 
     def init_grid(self, xsize, ysize):
+        """Initialize the grid to given size by populating with empty Cells"""
         self.grid = [[Cell(x, y) for x in range(xsize)] for y in range(ysize)]
         self.xsize = xsize
         self.ysize = ysize
 
     def print_grid(self):
+        """Print the grid in text format"""
         for row in self.grid:
             for cell in row:
                 if cell.is_source():
@@ -180,9 +182,7 @@ def route_net(net):
         # remove g from expansion list
         expansion_list.remove(g)
 
-        print('expanding on {}'.format(g))
-        # layout.print_grid()
-        # print()
+        #print('expanding on {}'.format(g))
 
         # if g is the target, exit the loop
         if g is target:
@@ -247,7 +247,7 @@ def parse_netlist(filepath):
             cell.content = 'obstacle'
 
         # next lines are wires to route
-        # TODO cleanup parsing of nets (make more readable)
+        layout.netlist = []
         num_wires = int(f.readline().strip())
         for i in range(num_wires):
             net_num = i + 1 # nets are numbered from 1
@@ -282,11 +282,11 @@ def open_benchmark(*args):
     Opens a dialog for user to select a netlist file, parses netlist
     file and sets up initial grid in the GUI."""
     openfilename = filedialog.askopenfilename()
-    if openfilename == '':
+    # return if user cancels out of dialog
+    if not openfilename:
         return
     filename.set(os.path.basename(openfilename))
     parse_netlist(openfilename)
-    # layout.print_grid()
 
     # initialize canvas with rectangles for layout
     # TODO move into GUI related function?
@@ -296,7 +296,6 @@ def open_benchmark(*args):
     rh = ch // layout.ysize
     xoffset = (cw % rw) / 2
     yoffset = (ch % rh) / 2
-    print(cw, ch, rw, rh, xoffset, yoffset)
     for row in layout.grid:
         for cell in row:
             x1 = cell.x * rw + xoffset
