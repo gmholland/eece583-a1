@@ -21,8 +21,9 @@ class Cell:
         self.text_id = None
 
     def __str__(self):
-        return "Cell((%s, %s) %s, n=%s, l=%s, prev=%s)" % (
-                self.x, self.y, self.content, self.net_num, self.label, repr(self.prev))
+        return "Cell({net} {content} ({x}, {y}) l={label}, prev={prev})".format(
+                net=self.net_num, x=self.x, y=self.y, content=self.content,
+                label=self.label, prev=repr(self.prev))
 
     def is_empty(self):
         if self.content == 'empty':
@@ -215,11 +216,14 @@ def route_net(source, target=None):
 
         # print('expanding on {}'.format(g))
 
-        # if g is the target, exit the loop
-        # if g is target:
-        #     break
-        if (g.net_num == source.net_num) and (g is not source):
-            break
+        # for A*: if g is the target, exit the loop
+        if algorithm == 'A*':
+            if g is target:
+                break
+        # for Lee-More: if we reach a matching net, exit the loop
+        else:
+            if (g.net_num == source.net_num) and (g is not source):
+                break
 
         # for all neighbours of g:
         neighbours = get_neighbours(g, source.net_num)
@@ -257,8 +261,10 @@ def route_net(source, target=None):
         if not (g.is_source()) and (not g.is_sink()):
             g.net_num = source.net_num
             g.content = 'net'
-        #net.route.append(g)
-        g = g.prev
+        # clear the prev pointer
+        prev = g.prev
+        g.prev = None
+        g = prev
 
     # clear labels of empty cells, update colours
     for row in layout.grid:
@@ -374,6 +380,7 @@ def route(*args):
     # route nets in netlist
     nets_routed = 0
     for net in layout.netlist: # TODO intelligent net ordering
+        print()
         # route from source to first sink
         route_net(net.source, net.sinks[0]) # TODO intelligent sink ordering
 
