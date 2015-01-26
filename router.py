@@ -1,5 +1,6 @@
 import os.path
 import pdb
+from priorityq import *
 from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
@@ -166,23 +167,18 @@ def route_net(net):
     """Route a net from source to first sink."""
     source = net.source
     target = net.sinks[0] # TODO route to multiple sinks
-    expansion_list = [] # TODO better implementation of priority queue
+    expansion_list = PriorityQueue()
 
     # label source with estimated distance to target, add to expansion list
     source.set_label(source.estimate_dist(target))
-    expansion_list.append(source)
+    expansion_list.add(item=source, priority=source.label)
 
     # while expansion list is not empty:
-    while expansion_list:
+    while not expansion_list.is_empty():
         # g = grid in expansion list with smallest label
-        g = expansion_list[0]
-        for cell in expansion_list:
-            if cell.label < g.label:
-                g = cell
-        # remove g from expansion list
-        expansion_list.remove(g)
+        g = expansion_list.extract_min()
 
-        #print('expanding on {}'.format(g))
+        print('expanding on {}'.format(g))
 
         # if g is the target, exit the loop
         if g is target:
@@ -200,7 +196,7 @@ def route_net(net):
                 # set previous cell of neighbour to current cell
                 neighbour.prev = g
                 # add neighbour to expansion list
-                expansion_list.append(neighbour)
+                expansion_list.add(item=neighbour, priority=neighbour.label)
 
     # if loop terminates without hitting target, fail
     else:
