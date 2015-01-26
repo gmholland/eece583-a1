@@ -284,6 +284,9 @@ def open_benchmark(*args):
     filename.set(os.path.basename(openfilename))
     parse_netlist(openfilename)
 
+    # enable the Route button
+    route_btn.state(['!disabled'])
+
     # initialize canvas with rectangles for layout
     # TODO move into GUI related function?
     cw = canvas.winfo_width()
@@ -310,9 +313,13 @@ def open_benchmark(*args):
 def route(*args):
     """Function called when pressing Route button.
 
-    Routes the first net in the netlist."""
+    Routes each net in the netlist."""
+    # route nets in netlist
     for net in layout.netlist:
         route_net(net)
+
+    # disable the Route button
+    route_btn.state(['disabled'])
 
 
 def restart(*args):
@@ -351,8 +358,10 @@ if __name__ == '__main__':
     open_btn.grid(column=0, row=0, padx=5, pady=5)
     route_btn = ttk.Button(btn_frame, text="Route", command=route)
     route_btn.grid(column=1, row=0, padx=5, pady=5)
+    route_btn.state(['disabled'])
     restart_btn = ttk.Button(btn_frame, text="Restart", command=restart)
     restart_btn.grid(column=2, row=0, padx=5, pady=5)
+    restart_btn.state(['disabled'])
 
     # run mainloop
     root.mainloop()
