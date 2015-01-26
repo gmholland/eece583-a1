@@ -22,9 +22,13 @@ class Cell:
         self.connected = False
 
     def __str__(self):
-        return "Cell({net} {content} ({x}, {y}) l={label}, prev={prev})".format(
+        if self.is_connected():
+            c = 'x'
+        else:
+            c = 'o'
+        return "Cell({net} {content} {c} ({x}, {y}) l={label}, prev={prev})".format(
                 net=self.net_num, x=self.x, y=self.y, content=self.content,
-                label=self.label, prev=repr(self.prev))
+                label=self.label, prev=repr(self.prev), c=c)
 
     def is_empty(self):
         if self.content == 'empty':
@@ -107,14 +111,17 @@ class Net:
         self.source = source
         self.sinks = sinks
         self.net_num = net_num
-        self.routed = False
 
     def __str__(self):
         return "Net(pins=%s, src=%s, sinks=%s, net=%s)" % (
                 self.num_pins, self.source, self.sinks, self.net_num)
 
     def is_routed(self):
-        return self.routed
+        """Returns True if all sinks are connected."""
+        for sink in self.sinks:
+            if not sink.is_connected():
+                return False
+        return True
 
 
 class Layout:
@@ -191,32 +198,32 @@ def get_neighbours(cell, net_num):
     return neighbours
 
 
-def route_net(source, target=None):
-    """Route a single net from source to optional target.
+def route_net(start, target=None):
+    """Route a single net from start cell to optional target.
     
-    If a target is given, uses A* algorithm to find a route between source
-    and target. If no target is given, source is assumed to be a net sink
+    If a target is given, uses A* algorithm to find a route between start
+    and target. If no target is given, start is assumed to be a net sink
     and Lee-Moore algorithm is run to expand out from the sink looking for
     previously routed cells.
 
     Returns True if net is successfully routed, False otherwise."""
     if target == None:
         algorithm = 'Lee-Moore'
-        print("routing sink {}".format(source))
+        print("routing sink {}".format(start))
     else:
         algorithm = 'A*'
-        print("routing source: {} to target: {}".format(source, target))
+        print("routing {} to {}".format(start, target))
 
     expansion_list = PriorityQueue()
 
-    # set source label according to algorithm
+    # set start label according to algorithm
     if algorithm == 'A*':
-        # A*: source label is estimated distance to target
-        label = source.estimate_dist(target)
+        # A*: start label is estimated distance to target
+        label = start.estimate_dist(target)
     else:
         label = 1
-    source.set_label(label)
-    expansion_list.add(item=source, priority=source.label)
+    start.set_label(label)
+    expansion_list.add(item=start, priority=start.label)
 
     # while expansion list is not empty:
     while not expansion_list.is_empty():
@@ -231,21 +238,21 @@ def route_net(source, target=None):
                 break
         # for Lee-More: if we reach a matching net, exit the loop
         else:
-            if (g.is_connected()) and (g.net_num == source.net_num) and (
-                    g is not source):
+            if (g.is_connected()) and (g.net_num == start.net_num) and (
+                    g is not start):
                 break
 
         # for all neighbours of g:
-        neighbours = get_neighbours(g, source.net_num)
+        neighbours = get_neighbours(g, start.net_num)
         for neighbour in neighbours:
             # if neighbour is unlabelled:
             if neighbour.label == 0:
                 neighbour.dist_from_src = g.dist_from_src + 1
                 if algorithm == 'A*':
-                    # label neighbour with dist from source + estimate of dist to go
+                    # label neighbour with dist from start + estimate of dist to go
                     label = neighbour.dist_from_src + neighbour.estimate_dist(target)
                 else: # Lee-More
-                    # label neighbour with distance from source
+                    # label neighbour with distance from start
                     label = neighbour.dist_from_src
                 neighbour.set_label(label)
                 # set previous cell of neighbour to current cell
@@ -262,16 +269,15 @@ def route_net(source, target=None):
     # traceback():
     # - start at taget, walk back along prev cells
     print("routed net!")
-    while g is not source:
+    while True:
         g.connected = True
         # don't modify content for source and sink
         if not (g.is_source()) and (not g.is_sink()):
-            g.net_num = source.net_num
+            g.net_num = start.net_num
             g.content = 'net'
-        # clear the prev pointer
-        prev = g.prev
-        g.prev = None
-        g = prev
+        if g is start:
+            break
+        g = g.prev
 
     # clear labels of empty cells, update colours
     layout.reset_grid()
