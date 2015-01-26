@@ -57,9 +57,7 @@ class Cell:
             self.set_text(str(label))
 
     def clear_label(self):
-        # don't clear labels from source or sinks
-        if (not self.is_source()) and (not self.is_sink()):
-            self.set_label(0)
+        self.set_label(0)
 
     def set_text(self, text=''):
         # text for source is +, text for sink is -
@@ -145,6 +143,13 @@ class Layout:
                 else:
                     print('[  ]', end='')
             print()
+
+    def reset_grid(self):
+        """Clear labels of cells in the grid and colourize."""
+        for row in self.grid:
+            for cell in row:
+                cell.clear_label()
+                cell.colourize()
 
 
 def get_neighbours(cell, net_num):
@@ -246,11 +251,7 @@ def route_net(source, target=None):
     # if loop terminates without hitting target, fail
     else:
         print("couldn't route net!")
-        # clear labels of empty cells, update colours
-        for row in layout.grid:
-            for cell in row:
-                cell.clear_label()
-                cell.colourize()
+        layout.reset_grid()
         return False
 
     # traceback():
@@ -267,10 +268,7 @@ def route_net(source, target=None):
         g = prev
 
     # clear labels of empty cells, update colours
-    for row in layout.grid:
-        for cell in row:
-            cell.clear_label()
-            cell.colourize()
+    layout.reset_grid()
 
     return True
 
