@@ -163,6 +163,11 @@ class Layout:
                 cell.clear_label()
                 cell.colourize()
 
+    def sort_netlist(self):
+        """Sorts the netlist based on the number of pins."""
+        tmp = sorted(self.netlist, key=lambda net: net.num_pins)
+        self.netlist = tmp
+
 
 def get_neighbours(cell, net_num):
     """Return a list of neighbours of a given cell.
@@ -392,6 +397,7 @@ def route(*args):
     route_btn.state(['disabled'])
 
     # route nets in netlist
+    layout.sort_netlist() # sort before routing
     nets_routed = 0
     for net in layout.netlist: # TODO intelligent net ordering
         logging.info("routing net {}...".format(net.net_num))
