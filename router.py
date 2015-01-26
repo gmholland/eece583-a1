@@ -13,6 +13,7 @@ class Cell:
         self.content = 'empty'
         self.net_num = 0
         self.label = 0
+        self.dist_from_src = 0
         self.prev = None
         self.rect_id = None
         self.text_id = None
@@ -76,6 +77,10 @@ class Cell:
         elif self.net_num != 0:
             colour = net_colours[(self.net_num - 1) % len(net_colours)]
             canvas.itemconfigure(self.rect_id, fill=colour)
+
+    def estimate_dist(self, target):
+        """Return the Manhatten distance between current and target Cells"""
+        return abs(self.x - target.x) + abs(self.y - target.y)
 
 
 class Net:
@@ -161,8 +166,8 @@ def route_net(net):
     target = net.sinks[0] # TODO route to multiple sinks
     expansion_list = [] # TODO better implementation of priority queue
 
-    # label source with 1, add to expansion list
-    source.set_label(1)
+    # label source with estimated distance to target, add to expansion list
+    source.set_label(source.estimate_dist(target))
     expansion_list.append(source)
 
     # while expansion list is not empty:
@@ -188,8 +193,10 @@ def route_net(net):
         for neighbour in neighbours:
             # if neighbour is unlabelled:
             if neighbour.label == 0:
-                # label neighbour with g + 1
-                neighbour.set_label(g.label + 1)
+                # label neighbour with dist from source + estimate of dist to go
+                neighbour.dist_from_src = g.dist_from_src + 1
+                label = neighbour.dist_from_src + neighbour.estimate_dist(target)
+                neighbour.set_label(label)
                 # set previous cell of neighbour to current cell
                 neighbour.prev = g
                 # add neighbour to expansion list
