@@ -1,6 +1,7 @@
 import os.path
 import pdb
 import random
+import logging
 from priorityq import *
 from tkinter import *
 from tkinter import ttk
@@ -198,21 +199,21 @@ def get_neighbours(cell, net_num):
     return neighbours
 
 
-def route_net(start, target=None):
-    """Route a single net from start cell to optional target.
+def route_segment(start, target=None):
+    """Route a single segment from start cell to optional target.
     
     If a target is given, uses A* algorithm to find a route between start
     and target. If no target is given, start is assumed to be a net sink
     and Lee-Moore algorithm is run to expand out from the sink looking for
-    previously routed cells.
+    cells already connected to the net.
 
     Returns True if net is successfully routed, False otherwise."""
     if target == None:
         algorithm = 'Lee-Moore'
-        print("routing sink {}".format(start))
+        logging.info("expanding sink {}".format(start))
     else:
         algorithm = 'A*'
-        print("routing {} to {}".format(start, target))
+        logging.info("routing {} to {}".format(start, target))
 
     expansion_list = PriorityQueue()
 
@@ -230,7 +231,7 @@ def route_net(start, target=None):
         # g = grid in expansion list with smallest label
         g = expansion_list.extract_min()
 
-        # print('expanding on {}'.format(g))
+        logging.debug('expanding on {}'.format(g))
 
         # for A*: if g is the target, exit the loop
         if algorithm == 'A*':
@@ -262,13 +263,13 @@ def route_net(start, target=None):
 
     # if loop terminates without hitting target, fail
     else:
-        print("couldn't route net!")
+        logging.info("couldn't route segment!")
         layout.reset_grid()
         return False
 
     # traceback():
     # - start at taget, walk back along prev cells
-    print("routed net!")
+    logging.info("routed segment!")
     while True:
         g.connected = True
         # don't modify content for source and sink
@@ -349,6 +350,8 @@ def open_benchmark(*args):
     # return if user cancels out of dialog
     if not openfilename:
         return
+
+    logging.info("opened benchmark:{}".format(openfilename))
     filename.set(os.path.basename(openfilename))
     parse_netlist(openfilename)
 
@@ -391,21 +394,23 @@ def route(*args):
     # route nets in netlist
     nets_routed = 0
     for net in layout.netlist: # TODO intelligent net ordering
-        print()
+        logging.info("routing net {}...".format(net.net_num))
         # route from source to first sink
-        route_net(net.source, net.sinks[0]) # TODO intelligent sink ordering
+        route_segment(net.source, net.sinks[0]) # TODO intelligent sink ordering
 
         # expand around sink looking for connection to trunk
         if len(net.sinks) > 1:
-            print("multiple sinks...")
+            logging.info("net {} has multiple sinks".format(net.net_num))
             for sink in net.sinks[1:]:
-                route_net(sink)
+                route_segment(sink)
 
         if net.is_routed():
             nets_routed = nets_routed + 1
 
     # display stats
-    stats_text.set("Routed {}/{} nets".format(nets_routed, len(layout.netlist)))
+    stats_msg = "Routed {}/{} nets".format(nets_routed, len(layout.netlist))
+    logging.info(stats_msg)
+    stats_text.set(stats_msg)
 
 
 def restart(*args):
@@ -415,10 +420,14 @@ def restart(*args):
     pass
 
 
-# main function TODO put into class
+# main function TODO put into class/GUI module
 if __name__ == '__main__':
+    # setup logfile
+    logging.basicConfig(filename='router.log', filemode='w', level=logging.INFO)
+
     layout = Layout()
 
+    # gui
     root = Tk()
     root.title("Assignment1-Routing")
 
