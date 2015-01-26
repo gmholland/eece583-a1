@@ -430,7 +430,7 @@ if __name__ == '__main__':
     canvas_frame = ttk.Frame(top_frame)
     canvas_frame.grid(column=0, row=0, sticky=(N,E,S,W))
     btn_frame = ttk.Frame(top_frame)
-    btn_frame.grid(column=0, row=1, sticky=(N,E,S,W))
+    btn_frame.grid(column=0, row=1)
     stats_frame = ttk.Frame(top_frame)
     stats_frame.grid(column=0, row=2)
 
