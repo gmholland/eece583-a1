@@ -8,7 +8,24 @@ from tkinter import ttk
 from tkinter import filedialog
 
 class Cell:
-    """Class representing a cell in the layout."""
+    """Class representing a cell in the layout.
+    
+    Data attributes:
+        xloc, yloc - coordinates of cell in the grid
+        content - 'empty', 'src', 'sink', 'net'
+        net_num - net number of net the Cell belongs to
+        label - used for Lee-Moore and A* routing
+        dist_from_src - used for A* routing
+        prev - pointer to predecessor Cell
+        rect_id - ID of canvas rectangle object in the gui
+        text_id - ID of canvas text object in the gui
+        connected - boolean indicating if Cell is connected
+                    to a the net source
+        
+        For sinks only:
+            est_dist_from_src - estimate of distance to net
+                                source, used to compare sinks
+    """
 
     def __init__(self, xloc, yloc):
         self.x = xloc
@@ -18,11 +35,13 @@ class Cell:
         self.label = 0
         self.dist_from_src = 0
         self.prev = None
-        self.rect_id = None
+        self.rect_id = None 
         self.text_id = None
         self.connected = False
+        self.est_dist_from_src = 0
 
     def __str__(self):
+        """Return a string representation of a Cell."""
         if self.is_connected():
             c = 'x'
         else:
@@ -123,6 +142,14 @@ class Net:
             if not sink.is_connected():
                 return False
         return True
+
+    def sort_sinks(self):
+        """Sort list of sinks based on estimated segment length.
+        
+        Use Manhatten distance to the net source as the estimate of
+        segment length."""
+        tmp = sorted(self.sinks, key=lambda cell: cell.est_dist_from_src)
+        self.sinks = tmp
 
 
 class Layout:
@@ -339,6 +366,7 @@ def parse_netlist(filepath):
                 sink = layout.grid[yloc][xloc]
                 sink.content = 'sink'
                 sink.net_num = net_num
+                sink.est_dist_from_src = sink.estimate_dist(source)
                 sinks.append(sink)
 
             layout.netlist.append(Net(num_pins, source, sinks, net_num))
@@ -399,12 +427,16 @@ def route(*args):
     # route nets in netlist
     layout.sort_netlist() # sort before routing
     nets_routed = 0
-    for net in layout.netlist: # TODO intelligent net ordering
+    for net in layout.netlist:
         logging.info("routing net {}...".format(net.net_num))
-        # route from source to first sink
-        route_segment(net.source, net.sinks[0]) # TODO intelligent sink ordering
 
-        # expand around sink looking for connection to trunk
+        # sort sinks by estimated distance to source
+        net.sort_sinks()
+
+        # route from source to "closest" sink
+        route_segment(net.source, net.sinks[0])
+
+        # for multiple sinks: expand around sink looking for connection to net
         if len(net.sinks) > 1:
             logging.info("net {} has multiple sinks".format(net.net_num))
             for sink in net.sinks[1:]:
