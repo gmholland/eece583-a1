@@ -395,7 +395,6 @@ def open_benchmark(*args):
     route_btn.state(['!disabled'])
 
     # initialize canvas with rectangles for layout
-    # TODO move into GUI related function?
     cw = canvas.winfo_width()
     ch = canvas.winfo_height()
     rw = cw // layout.xsize
@@ -451,25 +450,18 @@ def route(*args):
     stats_text.set(stats_msg)
 
 
-def restart(*args):
-    """Function called when pressing Restart button.
-
-    Currently does nothing."""
-    pass
-
-
-# main function TODO put into class/GUI module
+# main function
 if __name__ == '__main__':
     # setup logfile
     logging.basicConfig(filename='router.log', filemode='w', level=logging.INFO)
 
     layout = Layout()
 
-    # gui
+    # setup gui
     root = Tk()
     root.title("Assignment1-Routing")
 
-    # frames
+    # add frames to gui
     top_frame = ttk.Frame(root, padding="3 3 12 12")
     top_frame.grid(column=0, row=0, sticky=(N,E,S,W))
     top_frame.columnconfigure(0, weight=1)
@@ -481,28 +473,25 @@ if __name__ == '__main__':
     stats_frame = ttk.Frame(top_frame)
     stats_frame.grid(column=0, row=2)
 
-    # canvas frame (benchmark label + canvas)
+    # setup canvas frame (contains benchmark label and canvas)
     filename = StringVar()
     benchmark_lbl = ttk.Label(canvas_frame, textvariable=filename)
     benchmark_lbl.grid(column=0, row=0)
     canvas = Canvas(canvas_frame, width=640, height=480, bg="dark grey")
     canvas.grid(column=0, row=1, padx=5, pady=5)
 
-    # button frame (buttons)
+    # setup button frame (contains buttons)
     open_btn = ttk.Button(btn_frame, text="Open", command=open_benchmark)
     open_btn.grid(column=0, row=0, padx=5, pady=5)
     route_btn = ttk.Button(btn_frame, text="Route", command=route)
     route_btn.grid(column=1, row=0, padx=5, pady=5)
     route_btn.state(['disabled'])
-    restart_btn = ttk.Button(btn_frame, text="Restart", command=restart)
-    restart_btn.grid(column=2, row=0, padx=5, pady=5)
-    restart_btn.state(['disabled'])
 
-    # stats frame
+    # setup stats frame (contains stats)
     stats_text = StringVar()
     stats_text.set("")
     stats_lbl = ttk.Label(stats_frame, textvariable=stats_text)
     stats_lbl.grid(column=0, row=0)
 
-    # run mainloop
+    # run main event loop for gui
     root.mainloop()
